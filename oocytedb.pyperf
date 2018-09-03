@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<ProfilingTarget xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <StandaloneTarget>
+    <PythonInterpreter>
+      <Id>Global|PythonCore|3.6</Id>
+    </PythonInterpreter>
+    <WorkingDirectory>C:\Users\jpa\source\repos\oocytedb</WorkingDirectory>
+    <Script>C:\Users\jpa\source\repos\oocytedb\oocytedb.py</Script>
+    <Arguments />
+  </StandaloneTarget>
+  <Reports>
+    <Report>
+      <Filename>C:\Users\jpa\AppData\Local\Temp\oocytedb_20180823.vsp</Filename>
+    </Report>
+  </Reports>
+</ProfilingTarget>
