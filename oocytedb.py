@@ -119,6 +119,77 @@ def turtle_wtm(ws):
         else:
             wslist.append(rowlist)     
     return wslist
+
+def getassay(wslist):
+    assay = wslist[2][5]
+    if assay == 'Glycine DRC (uM)':
+        assay = 'glyDRC'
+    elif assay == 'Glutamate DRC (uM)':
+        assay = 'gluDRC'
+    elif assay == 'pH':
+        assay = 'pH'
+    elif assay == '1 min 1 conc ':
+        assay = '1min1conc'
+    elif assay == None:
+        assay = wslist[2][4]
+        if assay == 'Mg2+ (uM)':
+            assay = 'mgDRC'
+    else:
+        assay = wslist[0][3]
+        if assay == 'Zn2+ inhibition (10 mM Tricine)':
+            assay = 'znDRC'
+        else:
+            assay = wslist[1][3]
+            if assay == 'in 100 uM Glutamate and 100uM Glycine':
+                assay = 'mGluGly'
+    return assay
+def postpA(explist):
+    date_inj = explist[2]
+    if type(date_inj) != datetime.datetime:
+        date_inj = None
+    explist[2] = date_inj
+    vhold = explist[4]
+    vhold = vhold.strip('Vhold=')
+    vhold = vhold.strip(' mV')
+    explist[4] = vhold
+    phsol = explist[6]
+    phsol = phsol.strip('pH ')
+    explist[6] = phsol
+    rig = explist[8].replace('#','')
+    explist[8] = rig
+    initials = explist[9]
+    if initials == 'skim':
+        initials = 'sk'
+    explist[9] = initials
+    minidate = explist[3].strftime('%m%d%y')
+    miniassay = explist[1].strip('DRC')
+    explist[0] = miniassay + '-' + rig + '-' + initials + '-' + minidate
+    return(explist)
+def assayfinder(wslist):
+    assay = getassay(wslist)
+    if assay == 'gluDRC':
+        explist = glu.getexperiments(wslist)
+        oocytes = glu.getoocytes(wslist)
+    elif assay == 'glyDRC':
+        explist = gly.getexperiments(wslist)
+        oocytes = gly.getoocytes(wslist)
+    elif assay == 'mgDRC':
+        explist = mg.getexperiments(wslist)
+        oocytes = mg.getoocytes(wslist)
+    elif assay == 'znDRC':
+        explist = zn.getexperiments(wslist)
+        oocytes = zn.getoocytes(wslist)
+    elif assay == 'pH':
+        explist = ph.getexperiments(wslist)
+        oocytes = ph.getoocytes(wslist)
+    else:
+        explist = []
+        oocytes = []
+    print(explist)
+    for row in oocytes:
+        print(row)
+    return None
+
 #classes
 class excelcoordinates:
     def __init__(self, assay, postp, date_inj, date_rec, vhold,
@@ -320,75 +391,7 @@ def iterexcel(readdir, wtm_function, listfunction, wsname):
         wslist = wtm_function(ws)
         listfunction(wslist)
     return wslist
-def getassay(wslist):
-    assay = wslist[2][5]
-    if assay == 'Glycine DRC (uM)':
-        assay = 'glyDRC'
-    elif assay == 'Glutamate DRC (uM)':
-        assay = 'gluDRC'
-    elif assay == 'pH':
-        assay = 'pH'
-    elif assay == '1 min 1 conc ':
-        assay = '1min1conc'
-    elif assay == None:
-        assay = wslist[2][4]
-        if assay == 'Mg2+ (uM)':
-            assay = 'mgDRC'
-    else:
-        assay = wslist[0][3]
-        if assay == 'Zn2+ inhibition (10 mM Tricine)':
-            assay = 'znDRC'
-        else:
-            assay = wslist[1][3]
-            if assay == 'in 100 uM Glutamate and 100uM Glycine':
-                assay = 'mGluGly'
-    return assay
-def postpA(explist):
-    date_inj = explist[2]
-    if type(date_inj) != datetime.datetime:
-        date_inj = None
-    explist[2] = date_inj
-    vhold = explist[4]
-    vhold = vhold.strip('Vhold=')
-    vhold = vhold.strip(' mV')
-    explist[4] = vhold
-    phsol = explist[6]
-    phsol = phsol.strip('pH ')
-    explist[6] = phsol
-    rig = explist[8].replace('#','')
-    explist[8] = rig
-    initials = explist[9]
-    if initials == 'skim':
-        initials = 'sk'
-    explist[9] = initials
-    minidate = explist[3].strftime('%m%d%y')
-    miniassay = explist[1].strip('DRC')
-    explist[0] = miniassay + '-' + rig + '-' + initials + '-' + minidate
-    return(explist)
-def assayfinder(wslist):
-    assay = getassay(wslist)
-    if assay == 'gluDRC':
-        explist = glu.getexperiments(wslist)
-        oocytes = glu.getoocytes(wslist)
-    elif assay == 'glyDRC':
-        explist = gly.getexperiments(wslist)
-        oocytes = gly.getoocytes(wslist)
-    elif assay == 'mgDRC':
-        explist = mg.getexperiments(wslist)
-        oocytes = mg.getoocytes(wslist)
-    elif assay == 'znDRC':
-        explist = zn.getexperiments(wslist)
-        oocytes = zn.getoocytes(wslist)
-    elif assay == 'pH':
-        explist = ph.getexperiments(wslist)
-        oocytes = ph.getoocytes(wslist)
-    else:
-        explist = []
-        oocytes = []
-    print(explist)
-    for row in oocytes:
-        print(row)
-    return None
+
 
 iterexcel('C:/Users/jpa/Desktop/oldformat', turtle_wtm, assayfinder, 'Sheet1')
 

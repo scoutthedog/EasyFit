@@ -21,7 +21,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="oocytedb.py" />
-    <Compile Include="oocytednew.py" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="oocyte_cmd.R" />
