@@ -1,211 +1,29 @@
 #! C:/Users/jpa/Anaconda3/python
 
-#oocytedb.py
-#
+"""
+For processing and uploading oocyte recording data stored in excel files
+"""
 
 import os
-from openpyxl import load_workbook
 import csv
 import subprocess
 import mysql.connector
 import pandas
 import datetime
+from openpyxl import load_workbook
 
-recording_files_directory = 'C:/Users/jpa/Desktop/uploaddata'
-csv_write_directory = 'C:/Users/jpa/Desktop/csvdump'
-rscript_path = 'C:/Users/jpa/source/repos/oocytedb/oocyte_cmd.R'
+RECORDING_FILES_DIRECTORY = 'C:/Users/jpa/Desktop/uploaddata'
+CSV_WRITE_DIRECTORY = 'C:/Users/jpa/Desktop/csvdump'
+RSCRIPT_PATH = 'C:/Users/jpa/source/repos/oocytedb/oocyte_cmd.R'
+DATABASE = 'oocytedb'
 
-#---------------------------------------------------------------------------------------------------------------
-# DATABASE FUNCTIONS
-# dbcon() : connect to MySQL database
-def dbcon():
-    con = mysql.connector.connect(user='root',
-                              host='localhost',
-                              database='oocytesdb')
-    return(con)
-# updates the experiments table given experiment list
-def experiments_update(list):
-    con = dbcon()
-    cursor = con.cursor()
-    query = ("REPLACE INTO experiments (expID, assay, date_inj, date_rec, vhold, coagonist, phsol, drugID, rig, initials, experiment_info) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)")
-    cursor.execute(query, list)
-    con.commit()
-    cursor.close()
-    con.close
-    return None
-# updates the oocytes table given experiment list
-# replaces data (with the same primary key)
-# 
-def oocytes_update(list):
-    con = dbcon()
-    cursor = con.cursor()
-    print(pandas.DataFrame(list).to_string())
-    for sublist in list:
-        query = ("REPLACE INTO oocytes (expID,file,glun1,glun2,maxcurrent,ph68vs76,logm10,logm95,logm9,logm85,logm8,logm75,logm7,logm65,logm6,logm55,logm5,logm45,logm4,logm35,logm3,logm25,logm2,logm15,logm1,notes,dbinfo,logec50,hillslope,ymin,ymax,formula,isConv) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)")
-        result = cursor.execute(query, sublist)
-    isgood = input("Does this look good? (y/n) ")
-    if isgood == "y":
-        con.commit()
-        print("Uploaded to database")
-        code = 1
-    else:
-        con.close
-        print("Did not upload")
-        code = 0
-    con.close
-    return code
-
-#--------------------------------------------------------------------------------------------------------------
-# WORKSHEET FUNCTIONS
-# These functions convert an excel file into a python list of lists.
-# usually raw data from excel files.
-# sometimes this is acceptable.
-def fox_wtm(ws):
-    #reads oocyte data files of the format 'fox'
-    #I made up this name just to make it easier to remember what functions are being used for each file type.
-    wslist = []
-    nonelist = [None] * 37
-    for row in ws.iter_rows(min_row=3, min_col=1, max_row=100, max_col=37):
-        rowlist = []
-        for cell in row:
-            rowlist.append(cell.value)
-        if rowlist == nonelist:
-            break
-        else:
-            wslist.append(rowlist)
-    header = ['assay','file','glun1','glun2','maxcurrent','ph68vs76','logm10','logm95','logm9','logm85','logm8','logm75','logm7','logm65','logm6','logm55','logm5','logm45','logm4','logm35','logm3','logm25','logm2','logm15','logm1','notes','date_inj','date_rec','vhold','coagonist','phsol','rig','initials','dpi','rnapotglun1','rnapotglun2','dbinfo']
-    wslist = [header] + wslist
-    return wslist
-def gorilla_wtm_oocytes(ws):
-    #gorilla is the most recent version of oocyte data templates
-    wslist = []
-    nonelist = [None] * 27
-    for row in ws.iter_rows(min_row=3, min_col=1, max_row=100, max_col=26):
-        rowlist = []
-        counter = 0
-        for cell in row:
-            if counter == 0:
-                if cell.value == None:
-                    break
-                rowlist.append(expid(cell.value))
-            rowlist.append(cell.value)
-            counter = counter + 1
-        if rowlist == nonelist:
-            break
-        else:
-            wslist.append(rowlist)            
-    header = ['expID','file','glun1','glun2','maxcurrent','ph68vs76','logm10','logm95','logm9','logm85','logm8','logm75','logm7','logm65','logm6','logm55','logm5','logm45','logm4','logm35','logm3','logm25','logm2','logm15','logm1','notes','dbinfo']
-    wslist = [header] + wslist
-    return wslist
-def gorilla_wtm_experiments(ws):
-
-    wslist = []
-    nonelist = [None] * 10
-    for row in ws.iter_rows(min_row=3, min_col=27, max_row=3, max_col=36):
-        file1 = ws['A3'].value
-        experimentid = expid(file1)
-        rowlist = [experimentid]
-        for cell in row:
-            rowlist.append(cell.value)
-        if rowlist == nonelist:
-            break
-    #header = ['experimentid','assay','date_inj','date_rec','vhold','coagonist','phsol','drugid','rig','initials','experiment_info']
-    #wslist = [header] + wslist
-    print(rowlist[0] + ' --- uploaded to experiments table in database')
-    return rowlist
-def turtle_wtm(ws):
-    #turtle is for working with older oocytes templates
-    wslist = []
-    nonelist = [None] * 16
-    nonecounter = 0
-    for row in ws.iter_rows(min_row=1, min_col=2, max_row=100, max_col=17):
-        rowlist = []
-        for cell in row:
-            rowlist.append(cell.value)
-        if rowlist == nonelist:
-           nonecounter += 1
-           if nonecounter == 2:
-               break
-        else:
-            wslist.append(rowlist)     
-    return wslist
-
-def getassay(wslist):
-    assay = wslist[2][5]
-    if assay == 'Glycine DRC (uM)':
-        assay = 'glyDRC'
-    elif assay == 'Glutamate DRC (uM)':
-        assay = 'gluDRC'
-    elif assay == 'pH':
-        assay = 'pH'
-    elif assay == '1 min 1 conc ':
-        assay = '1min1conc'
-    elif assay == None:
-        assay = wslist[2][4]
-        if assay == 'Mg2+ (uM)':
-            assay = 'mgDRC'
-    else:
-        assay = wslist[0][3]
-        if assay == 'Zn2+ inhibition (10 mM Tricine)':
-            assay = 'znDRC'
-        else:
-            assay = wslist[1][3]
-            if assay == 'in 100 uM Glutamate and 100uM Glycine':
-                assay = 'mGluGly'
-    return assay
-def postpA(explist):
-    date_inj = explist[2]
-    if type(date_inj) != datetime.datetime:
-        date_inj = None
-    explist[2] = date_inj
-    vhold = explist[4]
-    vhold = vhold.strip('Vhold=')
-    vhold = vhold.strip(' mV')
-    explist[4] = vhold
-    phsol = explist[6]
-    phsol = phsol.strip('pH ')
-    explist[6] = phsol
-    rig = explist[8].replace('#','')
-    explist[8] = rig
-    initials = explist[9]
-    if initials == 'skim':
-        initials = 'sk'
-    explist[9] = initials
-    minidate = explist[3].strftime('%m%d%y')
-    miniassay = explist[1].strip('DRC')
-    explist[0] = miniassay + '-' + rig + '-' + initials + '-' + minidate
-    return(explist)
-def assayfinder(wslist):
-    assay = getassay(wslist)
-    if assay == 'gluDRC':
-        explist = glu.getexperiments(wslist)
-        oocytes = glu.getoocytes(wslist)
-    elif assay == 'glyDRC':
-        explist = gly.getexperiments(wslist)
-        oocytes = gly.getoocytes(wslist)
-    elif assay == 'mgDRC':
-        explist = mg.getexperiments(wslist)
-        oocytes = mg.getoocytes(wslist)
-    elif assay == 'znDRC':
-        explist = zn.getexperiments(wslist)
-        oocytes = zn.getoocytes(wslist)
-    elif assay == 'pH':
-        explist = ph.getexperiments(wslist)
-        oocytes = ph.getoocytes(wslist)
-    else:
-        explist = []
-        oocytes = []
-    print(explist)
-    for row in oocytes:
-        print(row)
-    return None
-
-#-------------------------------------------------------------------------------------------------------------
-# CLASSES
-# class excelcoordinates : this class is used in order to convert older spreadsheet files for database entry.
-# when it is initiated, the coordinates are entered as tuples. A matrix of values derrived straight from...
-# ... the excel spreadsheet are inputted and then it returns a correctly formatted matrix.
 class excelcoordinates:
+    """
+    This class is used in order to convert older spreadsheet files for database entry.
+
+    On class initiation, the coordinates are entered as tuples. A matrix of values derrived straight from
+    the excel spreadsheet are inputted and then it returns a correctly formatted matrix.
+    """
     def __init__(self, assay, postp, date_inj, date_rec, vhold,
                 coagonist, phsol, drugid, rig, 
                 initials, note, filename, glun1, 
@@ -308,39 +126,282 @@ class excelcoordinates:
                 oocytes.append(rowlist)
         return(oocytes)
 
+#--------------------
+# DATABASE FUNCTIONS |
+#--------------------
+def dbcon():
+    """
+    opens a new MySQL database connection
+    """
+    con = mysql.connector.connect(user='root', host='localhost', database=DATABASE)
+    return con
+def experiments_update(explist):
+    """
+    Connects to a MySQL database and uploads a list of experiment data to the table 'experiments'
+    """
+    con = dbcon()
+    cursor = con.cursor()
+    query = ("REPLACE INTO experiments"
+             "(expID, assay, date_inj, date_rec, vhold, coagonist, phsol, drugID, rig, initials, experiment_info)"
+             "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+             )
+    cursor.execute(query, explist)
+    con.commit()
+    cursor.close()
+    con.close
+    return(None)
+def oocytes_update(oocytelist):
+    """
+    Connects to a MySQL database and uploads a maxtrix (2-dimentional list) of data to the table 'oocytes'
 
-#--------------------------------------------------------------------------------------------------
-# CLASS INSTANCES
-# glu instance of class excelcoordinates
-glu = excelcoordinates(assay = 'gluDRC', postp = postpA, date_inj = (0,1), date_rec = (1,1), vhold = (0,3), coagonist = (1,3), phsol = (0,5), drugid = None,
+    Prints data on command line, and the user confirms that the data is accurate before it is uploaded.
+    The MySQL query uses the REPLACE syntax which means that old data is overwritten if the primary key (file)
+    is already found in the 'oocytes' table.
+    """
+    con = dbcon()
+    cursor = con.cursor()
+    #pandas dataframe used to format the matrix nicely
+    print(pandas.DataFrame(list).to_string())
+    for sublist in oocytelist:
+        query = ("REPLACE INTO oocytes" 
+                 "(expID,file,glun1,glun2,maxcurrent,ph68vs76,"
+                 "logm10,logm95,logm9,logm85,logm8,logm75,logm7,logm65,logm6,logm55,logm5,logm45,logm4,logm35,"
+                 "logm3,logm25,logm2,logm15,logm1,notes,dbinfo,logec50,hillslope,ymin,ymax,formula,isConv)"
+                 "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, "
+                 "%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+                 )
+        cursor.execute(query, sublist)
+    isgood = input("Does this look good? (y/n) ")
+    if isgood == "y":
+        con.commit()
+        print("Uploaded to database")
+        code = 1
+    else:
+        con.close
+        print("Did not upload")
+        code = 0
+    con.close
+    # code = 1 : uploaded
+    # code = 0 : not uploaded
+    return code
+#---------------------
+# WORKSHEET FUNCTIONS|
+#---------------------
+def fox_wtm(ws):
+    """
+    Reads oocyte data files in the format 'fox'. 
+    
+    This refers to files created in the early days of database developement (7/17/18 - 8/17/18)
+    The files have been significantly changed since then.
+    """
+    wslist = []
+    nonelist = [None] * 37
+    for row in ws.iter_rows(min_row=3, min_col=1, max_row=100, max_col=37):
+        rowlist = []
+        for cell in row:
+            rowlist.append(cell.value)
+        if rowlist == nonelist:
+            break
+        else:
+            wslist.append(rowlist)
+    header = ['assay','file','glun1','glun2','maxcurrent','ph68vs76','logm10','logm95','logm9',
+              'logm85','logm8','logm75','logm7','logm65','logm6','logm55','logm5','logm45','logm4',
+              'logm35','logm3','logm25','logm2','logm15','logm1','notes','date_inj','date_rec',
+              'vhold','coagonist','phsol','rig','initials','dpi','rnapotglun1','rnapotglun2','dbinfo']
+    wslist = [header] + wslist
+    return wslist
+def gorilla_wtm_oocytes(ws):
+    """
+    Most up-to-date version of database importing. Reads oocyte data files in the format 'gorilla'
+
+    This reads the oocyte data
+    """
+    wslist = []
+    nonelist = [None] * 27
+    for row in ws.iter_rows(min_row=3, min_col=1, max_row=100, max_col=26):
+        rowlist = []
+        counter = 0
+        for cell in row:
+            if counter == 0:
+                if cell.value == None:
+                    break
+                rowlist.append(create_expid(cell.value))
+            rowlist.append(cell.value)
+            counter = counter + 1
+        if rowlist == nonelist:
+            break
+        else:
+            wslist.append(rowlist)            
+    header = ['expID','file','glun1','glun2','maxcurrent','ph68vs76','logm10','logm95','logm9','logm85',
+              'logm8','logm75','logm7','logm65','logm6','logm55','logm5','logm45','logm4','logm35','logm3',
+              'logm25','logm2','logm15','logm1','notes','dbinfo']
+    wslist = [header] + wslist
+    return wslist
+def gorilla_wtm_experiments(ws):
+    """
+    Most up-to-date version of database importing. Reads oocyte data files in the format 'gorilla'
+
+    This reads the experiment data
+    """
+    nonelist = [None] * 10
+    for row in ws.iter_rows(min_row=3, min_col=27, max_row=3, max_col=36):
+        file1 = ws['A3'].value
+        experimentid = expid(file1)
+        rowlist = [experimentid]
+        for cell in row:
+            rowlist.append(cell.value)
+        if rowlist == nonelist:
+            break
+    #header = ['experimentid','assay','date_inj','date_rec','vhold','coagonist','phsol','drugid','rig','initials','experiment_info']
+    #wslist = [header] + wslist
+    print(rowlist[0] + ' --- uploaded to experiments table in database')
+    return rowlist
+def turtle_wtm(ws):
+    """
+    Used for working with older cferv oocyte data recording sheets
+    """
+    wslist = []
+    nonelist = [None] * 16
+    nonecounter = 0
+    for row in ws.iter_rows(min_row=1, min_col=2, max_row=100, max_col=17):
+        rowlist = []
+        for cell in row:
+            rowlist.append(cell.value)
+        if rowlist == nonelist:
+            nonecounter += 1
+            if nonecounter == 2:
+                break
+        else:
+            wslist.append(rowlist)     
+    return wslist
+
+def postpA(explist):
+    """
+    This is a post processing function A. It is used by the reformat function
+
+    Mutiple post-processing functions may be added with developement.
+    """
+    date_inj = explist[2]
+    if type(date_inj) != datetime.datetime:
+        date_inj = None
+    explist[2] = date_inj
+    vhold = explist[4]
+    vhold = vhold.strip('Vhold=')
+    vhold = vhold.strip(' mV')
+    explist[4] = vhold
+    phsol = explist[6]
+    phsol = phsol.strip('pH ')
+    explist[6] = phsol
+    rig = explist[8].replace('#','')
+    explist[8] = rig
+    initials = explist[9]
+    if initials == 'skim':
+        initials = 'sk'
+    explist[9] = initials
+    minidate = explist[3].strftime('%m%d%y')
+    miniassay = explist[1].strip('DRC')
+    explist[0] = miniassay + '-' + rig + '-' + initials + '-' + minidate
+    return(explist)
+def reformat(wslist):
+    """
+    wslist generated by the wtm function (raw unedited data from excel) --> database ready list
+
+    The bulk of this function workhorse is the excelcoordinates class. (defined below)
+    When an excelcoordinates class is defined, it is given tuples to describe the listwise location of the data.
+    For an example:
+    date_rec = (1,3) --> wslist[1][3] 
+    Whatever is stored in wslist[1][3] when given to this function,
+    will eventually be imported into the database as the date_rec.
+    This is why it is important to know where the data is stored on each excel spread sheet.
+    This function will (attemp to) logically determine which class instance should be used
+    As different formats are encountered in old data, this function will be modified
+    Additional class instances will be added as well
+    """
+    assay = wslist[2][5]
+    if assay == 'Glycine DRC (uM)':
+        assay = 'glyDRC'
+    elif assay == 'Glutamate DRC (uM)':
+        assay = 'gluDRC'
+    elif assay == 'pH':
+        assay = 'pH'
+    elif assay == '1 min 1 conc ':
+        assay = '1min1conc'
+    elif assay == None:
+        assay = wslist[2][4]
+        if assay == 'Mg2+ (uM)':
+            assay = 'mgDRC'
+    else:
+        assay = wslist[0][3]
+        if assay == 'Zn2+ inhibition (10 mM Tricine)':
+            assay = 'znDRC'
+        else:
+            assay = wslist[1][3]
+            if assay == 'in 100 uM Glutamate and 100uM Glycine':
+                assay = 'mGluGly'
+    # CLASS INSTANCES
+    glu = excelcoordinates(assay = 'gluDRC', postp = postpA, date_inj = (0,1), date_rec = (1,1), vhold = (0,3), coagonist = (1,3), phsol = (0,5), drugid = None,
                        initials = (0,7), rig = (1,7), note = (0,9), filename = (5,0), glun1 = (5,1), glun2 = (5,2), 
                        current = (5,3), d_start = (4,5), d_end = (4,14), r_start = (5,5), r_end = (5,14), rec_note = (5,15))
-# gly instance, same as glu with 'glyDRC' assay
-gly = glu
-gly.assay = 'glyDRC'
-# mg instance of class excelcoordinates
-mg = excelcoordinates(assay = 'mgDRC', postp = postpA, date_inj = (0,1), date_rec = (1,1), vhold = (0,5), coagonist = (1,3), phsol = (1,5), drugid = None,
+    gly = glu # same as glu instance
+    gly.assay = 'glyDRC' # different assay
+    mg = excelcoordinates(assay = 'mgDRC', postp = postpA, date_inj = (0,1), date_rec = (1,1), vhold = (0,5), coagonist = (1,3), phsol = (1,5), drugid = None,
                       initials = (0,8), rig = (1,8), note = (0,10), filename = (5,0), glun1 = (5,1), glun2 = (5,2),
                       current = (5,3), d_start = (4,5), d_end = (4,13), r_start = (5,5), r_end = (5,13), rec_note = (7,14))
-# ph instance of class excelcoordinates
-ph = excelcoordinates(assay = 'pH', postp = postpA, date_inj = (0,1), date_rec = (1,1), vhold = (0,5), coagonist = (1,2), phsol = (0,2), drugid = None,
+    ph = excelcoordinates(assay = 'pH', postp = postpA, date_inj = (0,1), date_rec = (1,1), vhold = (0,5), coagonist = (1,2), phsol = (0,2), drugid = None,
                       initials = (0,9), rig = (1,9), note = (0,11), filename = (7,0), glun1 = (7,1), glun2 = (7,2),
                       current = (7,3), d_start = (4,6), d_end = (4,6), r_start = (7,6), r_end = (7,6), rec_note = (7,15))
-# zn instance of class excelcoordinates
-zn = excelcoordinates(assay = 'znDRC', postp = postpA, date_inj = (0,1), date_rec = (1,1), vhold = (0,5), coagonist = (1,3), phsol = (1,5), drugid = None,
+    zn = excelcoordinates(assay = 'znDRC', postp = postpA, date_inj = (0,1), date_rec = (1,1), vhold = (0,5), coagonist = (1,3), phsol = (1,5), drugid = None,
                       initials = (0,7), rig = (1,7), note = (0,9), filename = (5,0), glun1 = (5,1), glun2 = (5,2),
                       current = (5,3), d_start = (4,5), d_end = (4,10), r_start = (5,5), r_end = (5,10), rec_note = (5,14))
+    # Class selection logic
+    if assay == 'gluDRC':
+        explist = glu.getexperiments(wslist)
+        oocytes = glu.getoocytes(wslist)
+    elif assay == 'glyDRC':
+        explist = gly.getexperiments(wslist)
+        oocytes = gly.getoocytes(wslist)
+    elif assay == 'mgDRC':
+        explist = mg.getexperiments(wslist)
+        oocytes = mg.getoocytes(wslist)
+    elif assay == 'znDRC':
+        explist = zn.getexperiments(wslist)
+        oocytes = zn.getoocytes(wslist)
+    elif assay == 'pH':
+        explist = ph.getexperiments(wslist)
+        oocytes = ph.getoocytes(wslist)
+    else:
+        explist = []
+        oocytes = []
+    print(explist)
+    for row in oocytes:
+        print(row)
+    return None
+
+#-------------------------------------------------------------------------------------------------------------
+# CLASSES
+
+
+#--------------------------------------------------------------------------------------------------
+
 #------------------------------------------------------------------------------------------------
 # OTHER FUNCTIONS
 
-def find_nth(str, x, n, i = 0):
-    #to find the nth occurence of x in the string str
-    i = str.find(x, i)
+def find_nth(mystring, x, n, i = 0):
+    """
+    find the nth occurance of string 'x' in mystring
+    """
+    i = mystring.find(x, i)
     if n == 1 or i == -1:
         return i 
     else:
-        return find_nth(str, x, n - 1, i + len(x))
-def expid(file):
+        return find_nth(mystring, x, n - 1, i + len(x))
+def create_expid(file):
+    """
+    Function for creating the experiment ID. 
+    
+    This is an important primary key in the experiments table of the database,
+    and a foriegn key to the oocytes table.
+    """
     test = find_nth(file, '-', 4)
     #find the 4th occurance of '-' in file
     expid = file[:test]
@@ -351,12 +412,11 @@ def expid(file):
 # DIRECTORY FUNCTIONS
 # these functions works with files on your hard drive
 # main data formats: csv, excel, MySQL
-def read_csv(csvfile):  
-  with open(csvfile, mode = 'r') as fp:
-    reader = csv.reader(fp, delimiter=',', quotechar='"')
-    # next(reader, None)  # skip the headers
-    data_read = [row for row in reader]
-  return(data_read)
+def read_csv(csvfile):
+    with open(csvfile, mode = 'r') as fp:
+        reader = csv.reader(fp, delimiter=',', quotechar='"')
+        data_read = [row for row in reader]
+    return(data_read)
 def write_csv(filename, csvname, wtm_function): # you should specify which wtm function you use (worksheet to matrix)
     wb = load_workbook(filename, data_only = True)
     ws = wb['DataEntry']
@@ -416,23 +476,19 @@ def call_rscript(readdir, scriptpath): #exectues an Rscript as a subprocess
     return(None)
 
 # Primary function.
-def dbupload(): # This is the main script function
-    
+def dbupload(): # This is the main script function  
     print('Initiating experiments data upload\n')
-    excel_to_db(recording_files_directory, gorilla_wtm_experiments, experiments_update)
-    
+    excel_to_db(RECORDING_FILES_DIRECTORY, gorilla_wtm_experiments, experiments_update) 
     print('\nInitiating csv creation for R subprocess\n')
-    excel_to_csv(recording_files_directory, csv_write_directory, gorilla_wtm_oocytes)
-    
+    excel_to_csv(RECORDING_FILES_DIRECTORY, CSV_WRITE_DIRECTORY, gorilla_wtm_oocytes) 
     print('\nInitiating R curve fitting\n')
-        call_rscript(csv_write_directory, rscript_path)
-    
+    call_rscript(CSV_WRITE_DIRECTORY, rscript_path)
     print('\nCurves fit. Preparing for database upload\n')
-    csv_to_db(csv_write_directory, oocytes_update)
+    csv_to_db(CSV_WRITE_DIRECTORY, oocytes_update)
     return None
 
 #testing
-def iterexcel(readdir, wtm_function, listfunction, wsname):
+def iterexcel(readdir, wtm_function, listfunction):
     for filename in os.listdir(readdir):
         readfulldir = readdir + '/' + filename
         wb = load_workbook(readfulldir, data_only = True)
@@ -441,11 +497,12 @@ def iterexcel(readdir, wtm_function, listfunction, wsname):
         listfunction(wslist)
     return wslist
 
-
-
 #---------------------------------------------------------------------------
 #MAIN
-
-iterexcel('C:/Users/jpa/Desktop/oldformat', turtle_wtm, assayfinder, 'Sheet1')
+def main():
+    iterexcel('C:/Users/jpa/Desktop/oldformat', turtle_wtm, reformat)
+    return None
+if __name__ == "__main__":
+    main()
 
 
