@@ -8,8 +8,6 @@ import mysql.connector
 import pandas
 import datetime
 
-#git test
-
 #--------------------------------------------------------------------------
 #database connections
 def dbcon():
@@ -229,25 +227,34 @@ class excelcoordinates:
         #postp processes the values in the experiment list (see postp functions)
         return(self.postp(experimentlist))
     def getoocytes(self, wslist):
+        #d is now the dictionary of oocytes coordinates
+        d = self.oocytes       
+        rowstart = d['filename'][0]
+        dosestart = d['d_start'][0]
+        explist = self.getexperiments(wslist)
+        expid = explist[0]
+        oocytes = []
         #behavior is different for pH
         if self.assay == 'pH':
-            oocytes = []
+            for row in range(rowstart, len(wslist)):
+                filename = wslist[row][d['filename'][1]]
+                k = filename.rfind('-')
+                filename = expid + filename[k:]
+                note = wslist[row][d['rec_note'][1]]
+                nonelist = [None] * 17
+                rowlist = [filename] + [wslist[row][d['glun1'][1]], wslist[row][d['glun2'][1]], 
+                                        wslist[row][d['current'][1]], wslist[row][d['r_start'][1]]] + nonelist + [wslist[row][d['rec_note'][1]]] + [None]
+                oocytes.append(rowlist)
         #all other assays
         else:
-            #d is now the dictionary of oocytes coordinates
-            d = self.oocytes
-            rowstart = d['filename'][0]
-            dosestart = d['d_start'][0]
-            oocytes = []
+            #the header is just a temporary placeholder that will be used to determine where to place the data
             header = ['filename','glun1','glun2','current']
             for dose in range(d['d_start'][1], d['d_end'][1] + 1):
                 heading = wslist[dosestart][dose]
                 header.append(heading)
             doses = header[4:]
-            rounded = []
             fulldose = [-10, 9.52, -9, -8.52, -8, -7.52, -7, -6.52, -6, -5.52, -5, -4.52, -4, -3.52, -3, -2.52, -2, -1.52, -1]
-            explist = self.getexperiments(wslist)
-            expid = explist[0]
+            rounded = []
             for value in doses:
                 if value == None:
                     pass
