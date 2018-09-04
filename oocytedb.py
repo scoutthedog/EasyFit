@@ -1,5 +1,8 @@
 #! C:/Users/jpa/Anaconda3/python
 
+#oocytedb.py
+#
+
 import os
 from openpyxl import load_workbook
 import csv
@@ -8,13 +11,19 @@ import mysql.connector
 import pandas
 import datetime
 
-#--------------------------------------------------------------------------
-#database connections
+recording_files_directory = 'C:/Users/jpa/Desktop/uploaddata'
+csv_write_directory = 'C:/Users/jpa/Desktop/csvdump'
+rscript_path = 'C:/Users/jpa/source/repos/oocytedb/oocyte_cmd.R'
+
+#---------------------------------------------------------------------------------------------------------------
+# DATABASE FUNCTIONS
+# dbcon() : connect to MySQL database
 def dbcon():
     con = mysql.connector.connect(user='root',
                               host='localhost',
-                              database='oocytedb')
+                              database='oocytesdb')
     return(con)
+# updates the experiments table given experiment list
 def experiments_update(list):
     con = dbcon()
     cursor = con.cursor()
@@ -24,6 +33,9 @@ def experiments_update(list):
     cursor.close()
     con.close
     return None
+# updates the oocytes table given experiment list
+# replaces data (with the same primary key)
+# 
 def oocytes_update(list):
     con = dbcon()
     cursor = con.cursor()
@@ -43,11 +55,11 @@ def oocytes_update(list):
     con.close
     return code
 
-#-------------------------------------------------------------------------
-#wtm functions (worksheet to matrix). 
-#These functions convert an excel file into a python list of lists.
-#usually raw data from excel files.
-#sometimes this is acceptable.
+#--------------------------------------------------------------------------------------------------------------
+# WORKSHEET FUNCTIONS
+# These functions convert an excel file into a python list of lists.
+# usually raw data from excel files.
+# sometimes this is acceptable.
 def fox_wtm(ws):
     #reads oocyte data files of the format 'fox'
     #I made up this name just to make it easier to remember what functions are being used for each file type.
@@ -188,7 +200,11 @@ def assayfinder(wslist):
         print(row)
     return None
 
-#classes
+#-------------------------------------------------------------------------------------------------------------
+# CLASSES
+# class excelcoordinates : this class is used in order to convert older spreadsheet files for database entry.
+# when it is initiated, the coordinates are entered as tuples. A matrix of values derrived straight from...
+# ... the excel spreadsheet are inputted and then it returns a correctly formatted matrix.
 class excelcoordinates:
     def __init__(self, assay, postp, date_inj, date_rec, vhold,
                 coagonist, phsol, drugid, rig, 
@@ -197,15 +213,18 @@ class excelcoordinates:
                d_end, r_start, r_end, rec_note):
         self.assay = assay #assay string
         self.postp = postp #post processing function used for the class instance
-        #contains a dictionary of tuples as coordinates that refer to their location in the wtm_function
+        
+        #self.experiments : contains a dictionary of tuples as coordinates that refer to their location in the wtm_function
         #wtm_function -> raw data as a list-> excelcoordinates -> postp -> ready for database upload
         self.experiments = ({'date_inj':date_inj, 'date_rec':date_rec, 'vhold':vhold, 
                              'coagonist':coagonist, 'phsol':phsol, 'drugid':drugid, 'rig':rig, 'initials':initials, 
                              'note':note})
+        #Some aberviations:
         #d_start - dose start
         #d_end - dose end - these are the headers for the data, determines where the data should be placed
         #r_start - response start
         #r_end - response end
+        #self.oocytes : also a dictionary of tuples that refer to the locations that the data is found on the excel spreadsheet.
         self.oocytes = ({'filename':filename, 'glun1':glun1, 
                              'glun2':glun2, 'current':current, 'd_start':d_start, 
                              'd_end':d_end, 'r_start':r_start, 'r_end':r_end, 'rec_note':rec_note})
@@ -228,11 +247,16 @@ class excelcoordinates:
         return(self.postp(experimentlist))
     def getoocytes(self, wslist):
         #d is now the dictionary of oocytes coordinates
-        d = self.oocytes       
+        d = self.oocytes
+        #an integer specifing the first row containing data (usually row 6 or 7)
         rowstart = d['filename'][0]
+        #an integer specified the row containing the dose/concentration
         dosestart = d['d_start'][0]
+        #using its own method getexperiments()
         explist = self.getexperiments(wslist)
+        #experiment id will be used to calculate the filnames
         expid = explist[0]
+        #left blank
         oocytes = []
         #behavior is different for pH
         if self.assay == 'pH':
@@ -253,6 +277,8 @@ class excelcoordinates:
                 heading = wslist[dosestart][dose]
                 header.append(heading)
             doses = header[4:]
+            #this code is designed to figure out how many 'none' values need to be added before and after...
+            #... in order to properly align the data for database entry.
             fulldose = [-10, 9.52, -9, -8.52, -8, -7.52, -7, -6.52, -6, -5.52, -5, -4.52, -4, -3.52, -3, -2.52, -2, -1.52, -1]
             rounded = []
             for value in doses:
@@ -265,9 +291,11 @@ class excelcoordinates:
             for value in rounded:
                 value = fulldose.index(value)
                 indexes.append(value)
+            #cal
             nonecolspre = [None] * min(indexes)
             nonecolspost = [None] * (18 - max(indexes))
             for row in range(rowstart, len(wslist)):
+                #creating the filename
                 filename = wslist[row][d['filename'][1]]
                 k = filename.rfind('-')
                 filename = expid + filename[k:]
@@ -281,25 +309,30 @@ class excelcoordinates:
         return(oocytes)
 
 
-#class instances
-#glu instance of class excelcoordinates
+#--------------------------------------------------------------------------------------------------
+# CLASS INSTANCES
+# glu instance of class excelcoordinates
 glu = excelcoordinates(assay = 'gluDRC', postp = postpA, date_inj = (0,1), date_rec = (1,1), vhold = (0,3), coagonist = (1,3), phsol = (0,5), drugid = None,
                        initials = (0,7), rig = (1,7), note = (0,9), filename = (5,0), glun1 = (5,1), glun2 = (5,2), 
                        current = (5,3), d_start = (4,5), d_end = (4,14), r_start = (5,5), r_end = (5,14), rec_note = (5,15))
+# gly instance, same as glu with 'glyDRC' assay
 gly = glu
 gly.assay = 'glyDRC'
-#
+# mg instance of class excelcoordinates
 mg = excelcoordinates(assay = 'mgDRC', postp = postpA, date_inj = (0,1), date_rec = (1,1), vhold = (0,5), coagonist = (1,3), phsol = (1,5), drugid = None,
                       initials = (0,8), rig = (1,8), note = (0,10), filename = (5,0), glun1 = (5,1), glun2 = (5,2),
                       current = (5,3), d_start = (4,5), d_end = (4,13), r_start = (5,5), r_end = (5,13), rec_note = (7,14))
+# ph instance of class excelcoordinates
 ph = excelcoordinates(assay = 'pH', postp = postpA, date_inj = (0,1), date_rec = (1,1), vhold = (0,5), coagonist = (1,2), phsol = (0,2), drugid = None,
                       initials = (0,9), rig = (1,9), note = (0,11), filename = (7,0), glun1 = (7,1), glun2 = (7,2),
                       current = (7,3), d_start = (4,6), d_end = (4,6), r_start = (7,6), r_end = (7,6), rec_note = (7,15))
+# zn instance of class excelcoordinates
 zn = excelcoordinates(assay = 'znDRC', postp = postpA, date_inj = (0,1), date_rec = (1,1), vhold = (0,5), coagonist = (1,3), phsol = (1,5), drugid = None,
                       initials = (0,7), rig = (1,7), note = (0,9), filename = (5,0), glun1 = (5,1), glun2 = (5,2),
                       current = (5,3), d_start = (4,5), d_end = (4,10), r_start = (5,5), r_end = (5,10), rec_note = (5,14))
-#---------------------------------------------------------------------------
-#other functions
+#------------------------------------------------------------------------------------------------
+# OTHER FUNCTIONS
+
 def find_nth(str, x, n, i = 0):
     #to find the nth occurence of x in the string str
     i = str.find(x, i)
@@ -314,7 +347,17 @@ def expid(file):
     #remove anything after the 4th occurance of '-'
     #example: glu-mb1-jpa-082918-14.5   -->  glu-mb1-jpa-082918
     return expid
-def createcsv(filename, csvname, wtm_function): # you should specify which wtm function you use (worksheet to matrix)
+#-------------------------------------------------------------------------------------------------
+# DIRECTORY FUNCTIONS
+# these functions works with files on your hard drive
+# main data formats: csv, excel, MySQL
+def read_csv(csvfile):  
+  with open(csvfile, mode = 'r') as fp:
+    reader = csv.reader(fp, delimiter=',', quotechar='"')
+    # next(reader, None)  # skip the headers
+    data_read = [row for row in reader]
+  return(data_read)
+def write_csv(filename, csvname, wtm_function): # you should specify which wtm function you use (worksheet to matrix)
     wb = load_workbook(filename, data_only = True)
     ws = wb['DataEntry']
     wslist = wtm_function(ws)
@@ -325,29 +368,39 @@ def createcsv(filename, csvname, wtm_function): # you should specify which wtm f
             testwriter.writerow(wslist)
         return(None)
     return(None)
-def foldertocsv(readdir, writedir, wtm_function): #writes all excel files in a folder to a csv in a folder
+def excel_to_csv(readdir, writedir, wtm_function): #writes all excel files in a folder to a csv in a folder
     for filename in os.listdir(readdir):
         csvfilename = filename[0:(len(filename)-4)] + 'csv'
         readfulldir = readdir + '/' + filename
         writefulldir = writedir + '/' + csvfilename
-        createcsv(readfulldir, writefulldir, wtm_function)
+        write_csv(readfulldir, writefulldir, wtm_function)
         #wtm_function chosen based on arguments
         print(csvfilename + ' --- written to desktop folder csvdump')
     writelen = len(os.listdir(readdir))
     writestr = str(writelen) + " files written to csv"
     print(writestr)
     return(None)
-def foldertodb(readdir, wtm_function, db_function):
+def excel_to_db(readdir, wtm_function, db_function):
     for filename in os.listdir(readdir):
         readfulldir = readdir + '/' + filename
         wb = load_workbook(readfulldir, data_only = True)
         ws = wb['DataEntry']
         db_function(wtm_function(ws))
     writelen = len(os.listdir(readdir))
-    writestr = str(writelen) + " files written to database"
+    writestr = str(writelen) + " files uploaded to database"
     print(writestr)
     return None
-def rscript(readdir, scriptpath): #exectues an Rscript as a subprocess
+def csv_to_db(readdir, db_function):
+    count = 0
+    for filename in os.listdir(readdir):
+        readfulldir = readdir + '/' + filename
+        print(readfulldir)
+        filelist = read_csv(readfulldir)
+        code = db_function(filelist)
+        count += code
+    print(str(count) + " file(s) uploaded to database")
+    return None
+def call_rscript(readdir, scriptpath): #exectues an Rscript as a subprocess
     command = 'Rscript'
     for filename in os.listdir(readdir):
         filefull = readdir + '/' + filename
@@ -361,35 +414,24 @@ def rscript(readdir, scriptpath): #exectues an Rscript as a subprocess
         subprocess.call(cmd)
         print(filefull + '--- added fits to the file')
     return(None)
-def csvreader(csvfile):  
-  with open(csvfile, mode = 'r') as fp:
-    reader = csv.reader(fp, delimiter=',', quotechar='"')
-    # next(reader, None)  # skip the headers
-    data_read = [row for row in reader]
-  return(data_read)
-def folderreadtodatabase(readdir, db_function):
-    count = 0
-    for filename in os.listdir(readdir):
-        readfulldir = readdir + '/' + filename
-        print(readfulldir)
-        filelist = csvreader(readfulldir)
-        code = db_function(filelist)
-        count += code
-    print(str(count) + " file(s) uploaded to database")
+
+# Primary function.
+def dbupload(): # This is the main script function
+    
+    print('Initiating experiments data upload\n')
+    excel_to_db(recording_files_directory, gorilla_wtm_experiments, experiments_update)
+    
+    print('\nInitiating csv creation for R subprocess\n')
+    excel_to_csv(recording_files_directory, csv_write_directory, gorilla_wtm_oocytes)
+    
+    print('\nInitiating R curve fitting\n')
+        call_rscript(csv_write_directory, rscript_path)
+    
+    print('\nCurves fit. Preparing for database upload\n')
+    csv_to_db(csv_write_directory, oocytes_update)
     return None
 
-#---------------------------------------------------------------------------
-#body
-def dbupload():
-    print('Initiating experiments data upload\n')
-    foldertodb('C:/Users/jpa/Desktop/uploaddata', gorilla_wtm_experiments, experiments_update)
-    print('\nInitiating csv creation for R subprocess\n')
-    foldertocsv('C:/Users/jpa/Desktop/uploaddata', 'C:/Users/jpa/Desktop/csvdump', gorilla_wtm_oocytes)
-    print('\nInitiating R curve fitting\n')
-    rscript('C:/Users/jpa/Desktop/csvdump', 'C:/Users/jpa/source/repos/oocytedb/oocyte_cmd.R')
-    print('\nCurves fit. Preparing for database upload\n')
-    folderreadtodatabase('C:/Users/jpa/Desktop/csvdump', oocytes_update)
-    return None
+#testing
 def iterexcel(readdir, wtm_function, listfunction, wsname):
     for filename in os.listdir(readdir):
         readfulldir = readdir + '/' + filename
@@ -399,6 +441,10 @@ def iterexcel(readdir, wtm_function, listfunction, wsname):
         listfunction(wslist)
     return wslist
 
+
+
+#---------------------------------------------------------------------------
+#MAIN
 
 iterexcel('C:/Users/jpa/Desktop/oldformat', turtle_wtm, assayfinder, 'Sheet1')
 
