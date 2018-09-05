@@ -29,6 +29,9 @@ class excelcoordinates:
                 initials, note, filename, glun1, 
                 glun2, current, d_start,
                d_end, r_start, r_end, rec_note):
+        """
+        The Class is initialized with the coordinates as tuples. assay and postp are the only non tuple arguments
+        """
         self.assay = assay #assay string
         self.postp = postp #post processing function used for the class instance
         
