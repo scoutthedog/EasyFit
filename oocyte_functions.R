@@ -479,6 +479,3 @@ fit2plot <- function(vardf, wtdf, const, variant = "variant", assay = "assay", w
     geom_line()
   return(f)
 }
-
-
-
