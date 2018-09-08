@@ -14,7 +14,7 @@ from openpyxl import load_workbook
 
 RECORDING_FILES_DIRECTORY = 'C:/Users/jpa/Desktop/uploaddata'
 CSV_WRITE_DIRECTORY = 'C:/Users/jpa/Desktop/csvdump'
-RSCRIPT_PATH = 'C:/Users/jpa/source/repos/oocytedb/oocyte_cmd.R'
+RSCRIPT_PATH = 'C:/Users/jpa/source/repos/oocytedb/oocytescript.R'
 DATABASE = 'oocytedb'
 
 class excelcoordinates:
@@ -166,7 +166,7 @@ def oocytes_update(oocytelist):
     con = dbcon()
     cursor = con.cursor()
     #pandas dataframe used to format the matrix nicely
-    print(pandas.DataFrame(list).to_string())
+    print(pandas.DataFrame(oocytelist).to_string())
     for sublist in oocytelist:
         query = ("REPLACE INTO oocytes" 
                  "(expID,file,glun1,glun2,maxcurrent,ph68vs76,"
@@ -251,7 +251,7 @@ def gorilla_wtm_experiments(ws):
     nonelist = [None] * 10
     for row in ws.iter_rows(min_row=3, min_col=27, max_row=3, max_col=36):
         file1 = ws['A3'].value
-        experimentid = expid(file1)
+        experimentid = create_expid(file1)
         rowlist = [experimentid]
         for cell in row:
             rowlist.append(cell.value)

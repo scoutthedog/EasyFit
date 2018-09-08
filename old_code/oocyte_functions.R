@@ -1,14 +1,12 @@
-# oocyte_functions.R
-# 
-# This file has tools for fitting oocyte data using a Nonlinear Least Sqares Regression.
-# There are also some tools for data visualization.
+#
+#oocytedata fitter
+#
 
 suppressMessages(library(ggplot2))
 suppressMessages(library(tidyverse))
 
-#These are the  concentrations 
-CONC <- c(0.0001, 0.0003, 0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1, 3, 10, 30, 100, 300, 1000, 3000, 10000, 30000, 100000)
-DOSE <- sapply(CONC, function(x) log10(x / 1000000))
+conc <- c(0.0001, 0.0003, 0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1, 3, 10, 30, 100, 300, 1000, 3000, 10000, 30000, 100000)
+dose <- sapply(conc, function(x) log10(x / 1000000))
 
 #functions
 removeNArows <- function(df) {
@@ -30,13 +28,8 @@ fitdata <- function(drt, b_const, t_const) {
   #An okay fitting scheme that just works
   
   fitstarts <- function(drt) {
-    # This function calculates the starting values for the nls function
-    #
-    # Args:
-    # drt - referes to the dose resposne table supplied in the original fitdatta function
-    # it is a table of doses and responses
-    drt <- drt[complete.cases(drt),] 
-    dose <- drt[,1] 
+    drt <- drt[complete.cases(drt),]
+    dose <- drt[,1]
     response <- drt[,2]
     ymin <- min(response)
     doseymin <- drt[drt[,"response"] == ymin, "dose"]
@@ -362,12 +355,12 @@ gorilla_genuploaddata <- function(db, b_const = TRUE, t_const = TRUE) {
 }
 
 calcresponse <- function(df) {
-  # finds the response for row n given the assay data
+  #finds the response for row n given the assay data
   #does not use the first column (file)
   response <- as.numeric(df[2:length(df)])
 }
 calcdrt <- function (df) {
-  # creates a table of dose and response
+  #creates a table of dose and response
   #dose <- calcdose(df)
   response <- calcresponse(df)
   if (all(is.na(response))) {
@@ -377,7 +370,7 @@ calcdrt <- function (df) {
   }
 }
 calcdose <- function(df) {
-  # calculates the log[dose] from the column names
+  #calculates the log[dose] from the column names
   conc <- names(df)
   conc <- conc[2:length(conc)]
   conc <- gsub("x",".", conc)
@@ -417,8 +410,8 @@ calcdf <- function(db) {
   lapply(dflist, removevarcol) 
 }
 ccalcpdf <- function(df, xmin, xmax) {
-  # creates a prediction data frame (pdf) of projected doses and predicted responses
-  # for use with graphing the line of best fit
+  #creates a prediction data frame (pdf) of projected doses and predicted responses
+  #for use with graphing the line of best fit
   dose.p <- data.frame(dose = seq(from = xmin,to = xmax, by = 0.1))
   fit <- cfitdata(df, 1)
   pred <- predict(fit, dose.p, "predict")
@@ -441,7 +434,7 @@ calcdfdrt <- function(df) {
   lapply(df, applydrt)
 }
 
-# graphs
+#graphs
 fitplot <- function(df, variant = "h1_/h2_-___", assay = "___DRC", wt = "___") {
   drts <- apply(df, 1, calcdrt)
   f <- ggplot(data = pdf, aes(x = test, y = pred, color = file),na.rm=TRUE) +
@@ -479,3 +472,6 @@ fit2plot <- function(vardf, wtdf, const, variant = "variant", assay = "assay", w
     geom_line()
   return(f)
 }
+
+
+

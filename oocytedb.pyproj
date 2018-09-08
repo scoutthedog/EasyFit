@@ -23,8 +23,8 @@
     <Compile Include="oocytedb.py" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="oocyte_cmd.R" />
-    <Content Include="oocyte_functions.R" />
+    <Content Include="4paramDRC.R" />
+    <Content Include="oocytescript.R" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
 </Project>
