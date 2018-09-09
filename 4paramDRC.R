@@ -43,9 +43,9 @@ uu_eq <- formula(response ~ (b+((t-b)/(1+(10^((c-dose)*h))))))
 #---------------------------------------------------------------------
 fourparamfit <- setRefClass(
   "FourParamFit", 
-  fields =  list(Tconstraint = "logical", Bconstraint = "logical", equation = "numeric", level = "numeric", dose = "numeric", response = "numeric",
+  fields =  list(Tconstraint = "logical", Bconstraint = "logical", equation = "ANY", level = "numeric", dose = "numeric", response = "numeric",
              # fields used to store information from nls()
-             c = "numeric", h = "numeric", t = "numeric", b = "numeric", isConv = "logical"),
+             c = "ANY", h = "ANY", t = "ANY", b = "ANY", isConv = "ANY"),
   methods = list(
     fourparamnls = function(r, d) {
       #
@@ -60,6 +60,8 @@ fourparamfit <- setRefClass(
       # nothing, but alters a lot of field variables
       #
       # First, some variables must be assinged
+      response <<- r
+      dose <<- d
       drt <- data.frame(response, dose) # creates a small data frame of doses and responses
       drt <- drt[complete.cases(drt),] # only allows complete cases, or rows for which there is both a dose and response
       dose <<- drt[,2] # added to the field
@@ -284,7 +286,8 @@ choosebestfit <- function(response, dose, b_const, t_const) {
       }
     }
   }
-  failedfit <- fourparamfit$new(isConv = FALSE)
+  failedfit <- fourparamfit$new(c = NA, h = NA, b = NA, t = NA, equation = NA, isConv = NA)
+  return(failedfit)
   # if none of them worked, then isConv is FALSE
 }
 calcfourparamfit <- function(response, dose, b_const, t_const) {
@@ -299,8 +302,6 @@ testfunction <- function() {
   dose <- c(-9,-8.52,-8,-7.52,-7,-6.52,-5.52,-4)
   response <- c(NA,0.7,1.2,3.2,17,49.5,85.7,100)
   list <- calcfourparamfit(response, dose, TRUE, TRUE)
-  print(list)  
 }
-
 
 

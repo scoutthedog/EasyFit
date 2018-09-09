@@ -1,7 +1,14 @@
 #! C:/Users/jpa/Anaconda3/python
 
 """
-For processing and uploading oocyte recording data stored in excel files
+For processing and uploading oocyte recording data stored in excel files into a MySQL database
+
+A general outline of the flow of this program.
+1) Uses openpyxl to read excel files and import them into python lists.
+2) The lists are then written to csv files
+3) The csv files are read by an R subprocess which calls Rscript and passes arguments from commandline
+4) The Rscript generates fits for the data and rewrites the csv file including the information about the fits
+5) The now fit data is uploaded to the MySQL database
 """
 
 import os

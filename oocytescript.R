@@ -12,14 +12,14 @@
 # and t_const is (TRUE/FALSE) indicating if the bottom is constrained in the fit equation model
 #
 # dplyr has useful data processing functions, it is required to run this script.
-library(dplyr)
+suppressMessages(library(dplyr))
 # 4paramDRC.R is the base function that is used to fit the data.
 source("C:/Users/jpa/source/repos/oocytedb/4paramDRC.R")
 # taking args from commandline
 args = commandArgs(trailingOnly = TRUE)
 # BELOW COMMENTED CODE IS FOR  TESTING ONLY
 # This lets me test run the file without having to call it from command line
-#args <- c("C:/Users/jpa/Desktop/csvdump/090518-MB1-Gly.csv", TRUE, TRUE)
+#args <- c("C:/Users/jpa/Desktop/csvdump/090618-MB1-pH.csv", TRUE, TRUE)
 #
 # This script will return an error if you don't give it arguments
 if (length(args) == 0) {
