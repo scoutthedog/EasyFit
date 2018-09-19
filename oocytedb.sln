@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27703.2047
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "oocytedb", "oocytedb.pyproj", "{9E7C35C9-0F6A-4CC6-B34D-595E3ABCD3B3}"
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "EasyFit", "EasyFit.pyproj", "{9E7C35C9-0F6A-4CC6-B34D-595E3ABCD3B3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

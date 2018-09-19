@@ -5,14 +5,14 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{9e7c35c9-0f6a-4cc6-b34d-595e3abcd3b3}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>oocytedb.py</StartupFile>
+    <StartupFile>start.py</StartupFile>
     <SearchPath />
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
     <ProjectTypeGuids>{888888a0-9f3d-457c-b088-3a5042f75d52}</ProjectTypeGuids>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
     <InterpreterId />
-    <Name>oocytedb</Name>
+    <Name>EasyFit</Name>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'" />
   <PropertyGroup Condition="'$(Configuration)' == 'Release'" />
@@ -20,11 +20,18 @@
     <VisualStudioVersion Condition=" '$(VisualStudioVersion)' == '' ">10.0</VisualStudioVersion>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="oocytedb.py" />
+    <Compile Include="database.py" />
+    <Compile Include="excelcoordinates.py" />
+    <Compile Include="fitgraph.py" />
+    <Compile Include="gui.py" />
+    <Compile Include="reader.py" />
+    <Compile Include="reformat.py" />
+    <Compile Include="start.py" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="4paramDRC.R" />
     <Content Include="oocytescript.R" />
+    <Content Include="README.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
 </Project>

@@ -1,4 +1,4 @@
-# oocytescript.R
+#oocytescript.R
 #
 # A script for fitting oocyte data to four parameter dose response curves from csv files.
 #
@@ -12,7 +12,6 @@
 # and t_const is (TRUE/FALSE) indicating if the bottom is constrained in the fit equation model
 #
 # dplyr has useful data processing functions, it is required to run this script.
-suppressMessages(library(dplyr))
 # 4paramDRC.R is the base function that is used to fit the data.
 source("C:/Users/jpa/source/repos/oocytedb/4paramDRC.R")
 # taking args from commandline
@@ -61,8 +60,9 @@ fitCSV <- function(csv, b_const, t_const) {
   #
   # START
   # removes all rows that have the dbinfo code DEL.
-  csv %>%
-    filter(dbinfo != "DEL") -> csvtemp
+  #csv %>%
+  #  filter(dbinfo != "DEL") -> csvtemp
+  csvtemp <- subset(csv, dbinfo != "DEL")
   if (nrow(csvtemp) != 0) {
     csv <- csvtemp
   }
@@ -91,9 +91,11 @@ fitCSV <- function(csv, b_const, t_const) {
   fits$file <- as.vector(csv[,2])
   # joining the two dataframes on the column file
   # this creates a big data frame ready to be written to a csv file.
-  suppressWarnings(right_join(csv, fits, by = "file"))
+  csv1 <- suppressWarnings(merge(csv, fits, by = "file"))
+  csv2 <- csv1[,c(2,1,3:length(csv1))]
 }
 # Finally, the fit csv function is called and fits are calculated
 csvwithfits <- fitCSV(csv, b_const, t_const)
 # These newly calculated fits are added to the original csv inputfile
 write.csv(csvwithfits, file = inputfile, na = "", row.names = FALSE)
+
