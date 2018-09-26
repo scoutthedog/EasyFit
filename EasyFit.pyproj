@@ -30,6 +30,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="4paramDRC.R" />
+    <Content Include="EasyFit.ico" />
     <Content Include="oocytescript.R" />
     <Content Include="README.txt" />
   </ItemGroup>

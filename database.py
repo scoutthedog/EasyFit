@@ -18,7 +18,6 @@ import mysql.connector as mysql
 import pandas as pd
 import datetime
 import reader
-
 from openpyxl import load_workbook
 
 RECORDING_FILES_DIRECTORY = 'C:/Users/jpa/Desktop/uploaddata'
@@ -84,10 +83,12 @@ def oocytes_update(oocytelist):
     # code = 0 : not uploaded
     return code
 
+def dbupload(wtm_function_experiments, wtm_function_oocytes):
+    """
+    This function used to be used a lot in the script version of the program. Using this function is no longer supported
 
-# Primary function.
-def dbupload(wtm_function_experiments, wtm_function_oocytes): # This is the main script function  
-    
+    Use at your own risk
+    """
     print('\nInitiating csv creation for R subprocess\n')
     reader.excel_to_csv(RECORDING_FILES_DIRECTORY, CSV_WRITE_DIRECTORY, wtm_function_oocytes) 
     print('\nInitiating R curve fitting\n')

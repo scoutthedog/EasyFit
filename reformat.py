@@ -1,3 +1,12 @@
+"""
+The reformat functions are used to reformat old data that preexisted the database
+
+Do not use or worry about using this ever, hopefully most if not all old data should have been
+convered if you are reading this. However if you are looking to understand this then see the documentation for the
+excelcoordinates class and the reformat(wslist, exp) function
+
+"""
+
 import excelcoordinates as xl
 import datetime
 from openpyxl import load_workbook

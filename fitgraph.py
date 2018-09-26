@@ -1,8 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.backends.tkagg as tkagg
-from matplotlib.backends.backend_agg import FigureCanvasAgg
+from matplotlib.backends.backend_tkagg import (
+    FigureCanvasTkAgg, NavigationToolbar2Tk)
 import tkinter as tk
+from matplotlib.backend_bases import key_press_handler
+from matplotlib.figure import Figure
 from openpyxl import load_workbook
 
 def showgraph(wslist):
@@ -32,6 +35,11 @@ def showgraph(wslist):
             continue
     # creates a color map the size of the number of variants in the data
     cmap = get_cmap(len(varlist) + 1, name = 'jet')
+    fig = Figure(figsize=(5, 4), dpi=100)
+    sub1 = fig.add_subplot(111)
+    sub1.set_title('Daily Recording Test')
+    sub1.set_ylabel('% Response')
+    sub1.set_xlabel('log[Agonist]')
     for row in wslist:
         if wslist.index(row) == 0:
             continue
@@ -54,12 +62,9 @@ def showgraph(wslist):
         file = row[0]
         outputlist = [file] + [rowvar] + [c] + [h] + [b] + [t] + datalist
         print(outputlist)
-        plt.plot(dose, datalist, 'o', color = color)
+        sub1.plot(dose, datalist, 'o', color = color)
         Y = b + ((t - b)/(1+(10**((c-X)*h))))
-        plt.plot(X, Y, color = color, label = rowvar + '  ...  ' + file)
-        plt.title('Daily Recording Test')
-        plt.ylabel('% Response')
-        plt.xlabel('log[Agonist]')
-        plt.legend(loc = 0)
-    plt.draw()
-    plt.show()
+        sub1.plot(X, Y, color = color, label = rowvar + '  ...  ' + file)
+    sub1.legend(loc = 0)
+    return(fig)
+    
